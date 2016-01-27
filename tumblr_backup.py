@@ -39,9 +39,10 @@ image_folder = ''
 
 # constant names
 root_folder = os.getcwdu()
-post_dir = 'posts'
-xml_dir = 'xml'
+
+
 image_dir = 'images'
+video_dir = 'videos'
 archive_dir = 'archive'
 theme_dir = 'theme'
 backup_css = 'backup.css'
@@ -158,6 +159,31 @@ def save_image(image_url, prefix=""):
         image_file.write(image_data)
     return _url(image_filename)
 
+def save_video(video_url, prefix=""):
+    """saves a video if not saved yet, returns the local file name"""
+    def _url(fn):
+        return u'../%s/%s' % (image_dir, fn)
+    video_filename = prefix + video_url.split('/')[-1]
+    glob_filter = '' if '.' in video_filename else '.*'
+    # check if a file with this name already exists
+    video_glob = glob(join(video_folder, video_filename + glob_filter))
+    if video_glob:
+        return _url(os.path.split(video_glob[0])[1])
+    # download the image data
+    try:
+        video_response = urllib2.urlopen(video_url)
+    except urllib2.HTTPError:
+        # return the original URL
+        return video_url
+    video_data = video_response.read()
+    video_response.close()
+    # determine the file type if it's unknown
+    
+    # save the image
+    with open_image(video_dir, video_filename) as video_file:
+        video_file.write(video_data)
+    return _url(video_filename)
+
 def save_style():
     with open_text(backup_css) as css:
         css.write('''\
@@ -271,10 +297,12 @@ class TumblrBackup:
         base = get_api_url(account)
 
         # make sure there are folders to save in
-        global save_folder, image_folder, post_ext, post_dir, have_custom_css
+        global save_folder, image_folder, video_folder, post_ext, post_dir, have_custom_css
         
-        save_folder = join(root_folder, account)
+        save_folder = join(root_folder, "publish", "public")
         image_folder = path_to(image_dir)
+        video_folder = path_to(video_dir)
+        
         post_class = TumblrPost
         have_custom_css = os.access(path_to(custom_css), os.R_OK)
         mkdir(save_folder, True)
@@ -348,7 +376,7 @@ class TumblrBackup:
                 post.generate_content()
                 if post.error:
                     sys.stderr.write('%s%s\n' % (post.error, 50 * ' '))
-                post.save_post()
+                
                 jsonposts[post.jsonpost["date"]] = post.jsonpost
                 self.post_count += 1
                 
@@ -361,7 +389,7 @@ class TumblrBackup:
 
         # Get the XML entries from the API, which we can only do for max 50 posts at once.
         # Posts "arrive" in reverse chronological order. Post #0 is the most recent one.
-        MAX = 50
+        MAX = 10
         for i in range(options.skip, last_post, MAX):
             # find the upper bound
             j = min(i + MAX, last_post)
@@ -478,6 +506,11 @@ class TumblrPost:
                 else:
                     p = body.find("</div>")
                     self.jsonpost["description"] = body[p + 6:] 
+                                    
+                fname = self.get_image_url(url, self.ident + "_")
+                pos = fname.rfind("/")
+                self.jsonpost["url"] = fname[pos + 1:]
+                
             else:
                 tag = get_html_attr(body, "embed", "flashvars")
                 
@@ -498,11 +531,13 @@ class TumblrPost:
                     p = body.find(">", p)
                     q = body.find('</embed', p)
                     self.jsonpost["description"] = body[p + 1:q] 
-                    
-            if url: 
-                fname = self.get_image_url(url, self.ident + "_")
-                pos = fname.rfind("/")
-                self.jsonpost["url"] = fname[pos + 1:]
+
+                    fname = self.get_video_url(url, self.ident + "_")
+                    pos = fname.rfind("/")
+                    self.jsonpost["url"] = fname[pos + 1:]               
+
+    
+            
             
             
         
@@ -583,7 +618,7 @@ class TumblrPost:
                 print src
             
             print "fetching video " + url + "..."
-            fname = self.get_image_url(url)
+            fname = self.get_video_url(url)
             print "done"
             
             import urllib
@@ -623,8 +658,11 @@ class TumblrPost:
             
         
 
-    def get_image_url(self, url, prefix=""):
+    def get_image_url(self, url, prefix=""):        
         return save_image(url, prefix)
+    
+    def get_video_url(self, url, prefix=""):
+        return save_video(url, prefix)
 
     def get_post(self):
         """returns this post in HTML"""
@@ -640,16 +678,7 @@ class TumblrPost:
         post += '\n</article>\n'
         return post
 
-    def save_post(self):
-        """saves this post locally"""
-        with open_text(post_dir, self.file_name) as f:
-            f.write(self.get_post())
-        os.utime(path_to(post_dir, self.file_name),
-            (self.date, self.date)
-        )
-        if options.xml:
-            with open_text(xml_dir, self.ident + '.xml') as f:
-                f.write(self.xml_content)
+   
                 
 
 
