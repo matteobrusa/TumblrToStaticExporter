@@ -272,16 +272,11 @@ class TumblrBackup:
 
         # make sure there are folders to save in
         global save_folder, image_folder, post_ext, post_dir, have_custom_css
-        if options.blosxom:
-            save_folder = root_folder
-            post_ext = '.txt'
-            post_dir = os.curdir
-            post_class = BlosxomPost
-        else:
-            save_folder = join(root_folder, account)
-            image_folder = path_to(image_dir)
-            post_class = TumblrPost
-            have_custom_css = os.access(path_to(custom_css), os.R_OK)
+        
+        save_folder = join(root_folder, account)
+        image_folder = path_to(image_dir)
+        post_class = TumblrPost
+        have_custom_css = os.access(path_to(custom_css), os.R_OK)
         mkdir(save_folder, True)
 
         self.post_count = 0
@@ -389,7 +384,7 @@ class TumblrBackup:
                 json.dump(sortedlist[::-1], fp)
 
 
-        if not options.blosxom and self.post_count:
+        if self.post_count:
             get_avatar()
             get_style()
             if not have_custom_css:
@@ -658,18 +653,7 @@ class TumblrPost:
                 
 
 
-class BlosxomPost(TumblrPost):
 
-    def get_image_url(self, url):
-        return url
-
-    def get_post(self):
-        """returns this post as a Blosxom post"""
-        post = self.title + '\nmeta-id: _' + self.ident + '\nmeta-url: ' + self.url
-        if self.tags:
-            post += '\nmeta-tags: ' + ' '.join(t.replace(' ', '+') for t in self.tags)
-        post += '\n\n' + self.content
-        return post
 
 class LocalPost:
 
@@ -703,9 +687,6 @@ if __name__ == '__main__':
     )
     parser.add_option('-x', '--xml', action='store_true',
         help="save the original XML source"
-    )
-    parser.add_option('-b', '--blosxom', action='store_true',
-        help="save the posts in blosxom format"
     )
     parser.add_option('-r', '--reverse-month', action='store_false', default=True,
         help="reverse the post order in the monthly archives"
