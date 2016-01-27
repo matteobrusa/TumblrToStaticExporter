@@ -24,9 +24,10 @@
 		<div class="horizontal">
 			<div class="vertical">
 				<div style="background-color: #888">
-					This is a private blog. <br/>
-					<input id="password" type="text" placeholder="password" /> 			
+					<p>This is a private blog.</p>
+					<input id="password" type="password" placeholder="password" /> 			
 					<button id="loginbutton" type="button">Let me in!</button>
+					<p id="wrongPassword" style="display:none">wrong password</p>
 				</div> 
 			</div> 
  		</div> 
@@ -83,7 +84,11 @@
 						}					
 					} 
 				},
-				error : function(xhr, ajaxOptions, thrownError) {				
+				error : function(xhr, ajaxOptions, thrownError) {	
+					
+					if (baseUrl!="public/"){
+						$("#wrongPassword").show();
+					}			
 					 
  					$("#loginbox").show();
 					$("#loginbutton").on("click", function() {
@@ -243,6 +248,6 @@
 			}
 		});
 	</script>
-	<script src="scripts/sha1.js"></script>
+	<script src="sha1.js"></script>
 </body>
 </html>
