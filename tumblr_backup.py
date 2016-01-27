@@ -747,7 +747,8 @@ if __name__ == '__main__':
         args = ['bbolli']
 
     tb = TumblrBackup()
-    for account in args:
-        tb.backup(account)
+#    for account in args:
+    account = args[0]
+    tb.backup(account)
 
     sys.exit(0 if tb.total_count else 1)
