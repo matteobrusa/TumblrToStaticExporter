@@ -268,10 +268,6 @@ class TumblrBackup:
         image_folder = path_to(image_dir)
         video_folder = path_to(video_dir)
         
-                
-       
-        
-        
         mkdir(save_folder, True)
         
         # copy the static HTML files
@@ -281,6 +277,8 @@ class TumblrBackup:
         copy(join(html_folder, "index.html"), publish_folder)
         copy(join(html_folder, "index.css"), publish_folder)
         copy(join(html_folder, "sha1.js"), publish_folder)
+
+
         
         post_class = TumblrPost
         have_custom_css = os.access(path_to(custom_css), os.R_OK)
@@ -334,11 +332,18 @@ class TumblrBackup:
         global post_header
         post_header = header(self.title, body_class='post')
 
+        # create config.json
+        jsonconfig={}        
+        
+        jsonconfig["title"]= self.title
+        jsonconfig["description"]= self.subtitle
+                      
+        with open(join(publish_folder, 'config.json'), 'w') as fp:
+            json.dump(jsonconfig, fp)
+
         # find the total number of posts
         total_posts = options.count or int(soup.posts('total'))
         last_post = options.skip + total_posts
-
-	
 
         def _backup(posts):
             
