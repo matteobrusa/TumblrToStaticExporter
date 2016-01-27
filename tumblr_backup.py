@@ -17,7 +17,7 @@ import locale
 from glob import glob
 import re
 
-# debugging
+
 import json
 
 # extra required packages
@@ -184,17 +184,7 @@ def save_video(video_url, prefix=""):
         video_file.write(video_data)
     return _url(video_filename)
 
-def save_style():
-    with open_text(backup_css) as css:
-        css.write('''\
-body { width: 720px; margin: 0 auto; }
-img { max-width: 720px; }
-blockquote { margin-left: 0; border-left: 8px #999 solid; padding: 0 24px; }
-.archive h1, .subtitle, article { padding-bottom: 0.75em; border-bottom: 1px #ccc dotted; }
-.post a.llink { display: none; }
-.meta a { text-decoration: none; }
-.avatar { float: right; }
-''')
+ 
 
 def header(heading, title='', body_class='', subtitle='', avatar=''):
     root_rel = '' if body_class == 'index' else '../'
@@ -252,45 +242,6 @@ class TumblrBackup:
     def __init__(self):
         self.total_count = 0
 
-    def build_index(self):
-        for f in glob(path_to(post_dir, '*.html')):
-            post = LocalPost(f)
-            self.index[post.tm.tm_year][post.tm.tm_mon].append(post)
-
-    def save_index(self):
-        f = glob(path_to(theme_dir, avatar_base + '.*'))
-        avatar = os.path.split(f[0])[1] if f else None
-        with open_text('index.html') as idx:
-            idx.write(header(self.title, self.title, body_class='index',
-                subtitle=self.subtitle, avatar=avatar
-            ))
-            for year in sorted(self.index.keys(), reverse=options.reverse_index):
-                self.save_year(idx, year)
-            idx.write('<p>Generated on %s.</p>\n' % strftime('%x %X'))
-
-    def save_year(self, idx, year):
-        idx.write('<h3>%s</h3>\n<ul>\n' % year)
-        for month in sorted(self.index[year].keys(), reverse=options.reverse_index):
-            tm = time.localtime(time.mktime([year, month, 3, 0, 0, 0, 0, 0, -1]))
-            month_name = self.save_month(year, month, tm)
-            idx.write('    <li><a href=%s/%s title="%d post(s)">%s</a></li>\n' % (
-                archive_dir, month_name, len(self.index[year][month]),
-                strftime('%B', tm)
-            ))
-        idx.write('</ul>\n\n')
-
-    def save_month(self, year, month, tm):
-        file_name = '%d-%02d.html' % (year, month)
-        with open_text(archive_dir, file_name) as arch:
-            arch.write('\n\n'.join([
-                header(self.title, strftime('%B %Y', tm), body_class='archive'),
-                '\n'.join(p.get_post() for p in sorted(
-                    self.index[year][month], key=lambda x: x.date, reverse=options.reverse_month
-                )),
-                '<p><a href=../ rel=contents>Index</a></p>\n'
-            ]))
-        return file_name
-
     def backup(self, account):
         """makes single files and an index for every post on a public Tumblr blog account"""
 
@@ -299,13 +250,41 @@ class TumblrBackup:
         # make sure there are folders to save in
         global save_folder, image_folder, video_folder, post_ext, post_dir, have_custom_css
         
-        save_folder = join(root_folder, "publish", "public")
+        publish_folder = join(root_folder, "static")
+        
+        content_folder = "public"
+        
+         # if private, rename public to hash(pwd)
+        if options.private:
+            import hashlib
+            import base64
+            
+            hash = hashlib.sha1(options.private)
+            content_folder = "private-" + hash.digest().encode('base64')
+            content_folder = content_folder.replace("=", "").strip()          
+            
+        
+        save_folder = join(root_folder, "static", content_folder)
         image_folder = path_to(image_dir)
         video_folder = path_to(video_dir)
         
+                
+       
+        
+        
+        mkdir(save_folder, True)
+        
+        # copy the static HTML files
+        from shutil import copy
+        
+        html_folder = join(root_folder, "html")
+        copy(join(html_folder, "index.html"), publish_folder)
+        copy(join(html_folder, "index.css"), publish_folder)
+        copy(join(html_folder, "sha1.js"), publish_folder)
+        
         post_class = TumblrPost
         have_custom_css = os.access(path_to(custom_css), os.R_OK)
-        mkdir(save_folder, True)
+        
 
         self.post_count = 0
 
@@ -408,21 +387,13 @@ class TumblrBackup:
         for key in sorted(jsonposts):
             sortedlist.append(jsonposts[key])
         
-        with open('posts.json', 'w') as fp:
+        with open(join(save_folder, 'posts.json'), 'w') as fp:
                 json.dump(sortedlist[::-1], fp)
-
-
-        if self.post_count:
-            get_avatar()
-            get_style()
-            if not have_custom_css:
-                save_style()
-            self.index = defaultdict(lambda: defaultdict(list))
-            self.build_index()
-            self.save_index()
 
         log(account, "%d posts backed up\n" % self.post_count)
         self.total_count += self.post_count
+
+
 
 
 class TumblrPost:
