@@ -1,0 +1,248 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Intro</title>
+    <link href="index.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+ 
+	<h1>Blog</h1>
+
+	<div id="posts"></div>
+
+	<div id="lightbox" class="lightbox">
+ 		<div class="horizontal">
+			<div class="vertical" >
+				<div>
+					<img id="lightboxImage"/>				
+				</div> 
+			</div> 
+ 		</div> 
+	</div>
+ 
+    <div id="loginbox" class="lightbox">
+		<div class="horizontal">
+			<div class="vertical">
+				<div style="background-color: #888">
+					This is a private blog. <br/>
+					<input id="password" type="text" placeholder="password" /> 			
+					<button id="loginbutton" type="button">Let me in!</button>
+				</div> 
+			</div> 
+ 		</div> 
+    </div>
+		
+ 
+ 
+    <div style="display: none">
+		
+		<article id="postTemplate">
+			<header class="posttitle"></header>
+			<figure class="mediacontainer" style="alignment: justify"></figure>
+			<figcaption>
+				<h3 class="postdate"></h3>
+				<p class="postdescription"></p>
+			</figcaption>
+		</article>
+		
+		<img id="photo100" class="lightbox_trigger photo100"/>
+		<img id="photo50" class="lightbox_trigger photo50"/>		 
+		<img id="photo33" class="lightbox_trigger photo33"/>
+		
+		<video id="videoTemplate" controls preload="metadata">
+				<source class="src" type="video/mp4">
+				Your browser does not support HTML5 video.
+		</video>		
+    </div>
+ 
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+     
+    <script type="text/javascript">
+
+		startcount= 8;
+		actualcount= 0;
+		posts= null;
+
+		baseUrl="public/";
+		
+
+
+
+		function loadPosts() {
+			$.ajax({
+				url: baseUrl+"posts.json",
+				dataType: "json",
+				success: function (data) {		 
+					
+					posts= data;
+					if (posts.length > 0) {
+
+						// fill the post list
+						for ( actualcount = 0; actualcount < startcount; actualcount++ ) {
+							addPost(posts[actualcount]);
+						}					
+					} 
+				},
+				error : function(xhr, ajaxOptions, thrownError) {				
+					 
+ 					$("#loginbox").show();
+					$("#loginbutton").on("click", function() {
+						$("#loginbox").hide();
+						loadPrivatePosts($("#password").val());
+					});	
+					$("#password").keypress(function (e) {
+						if (e.which == 13) {	
+							$("#loginbox").hide();
+							loadPrivatePosts($("#password").val());
+						}
+					});
+				}
+			}); 		
+		}
+		
+		loadPosts("posts.json");
+
+		function loadPrivatePosts(pwd) {
+			console.log(pwd);
+			
+			hash= b64_sha1(pwd);
+			console.log(hash);
+			
+			baseUrl= "private-"+hash+"/"
+			loadPosts();
+		}
+
+
+		function timestampToDate(tstamp)  {
+			d= new Date(tstamp * 1000);
+			
+			var year = 1900+d.getYear();
+			var month = d.getMonth()+1;
+			var day = d.getDate();
+			var hour = d.getHours();
+			var minute = d.getMinutes();
+			var second = d.getSeconds();
+
+			return day + "/" + month+"/"+year;
+		}
+
+		function addPost(post) {
+			
+			var template = getTemplate("#postTemplate");	 
+
+			$(".posttitle", template).text(post.title);
+			$(".postdate", template).text(timestampToDate(post.date));
+			$(".postdescription", template).html(post.description);
+
+ 		
+			var mediacontainer= $(".mediacontainer", template);
+			
+			// photo template
+			if (post.type=="photo") {
+				
+				var a= getTemplate("#photo100");
+				a.attr("src", baseUrl + "images/"+ post.url);
+				addLightboxWithImage(a);
+				mediacontainer.append(a);
+			
+			// photoset template
+			} else if (post.type=="photoset") {
+				
+				var tot= post.urls.length;
+				
+				$.each(post.urls, function(index, url) {
+					
+					var a;
+					
+					if (tot == 2)
+						a= getTemplate("#photo50");
+					else {
+						if (index == 0)
+							a= getTemplate("#photo100");
+						else {
+							var n= tot -1;
+							var rem= tot -index;
+							if (n % 3 == 0) { // c
+								a= getTemplate("#photo33");
+							} 
+							else if ((n-2) % 3 == 0) { // b
+								if (rem<=2)
+									a= getTemplate("#photo50");
+								else
+									a= getTemplate("#photo33");
+							} 
+							else if ((n-4) % 3 == 0) { // a
+								if (rem<=4)
+									a= getTemplate("#photo50");
+								else
+									a= getTemplate("#photo33");
+							} 
+						}						
+					}
+				
+					a.attr("src", baseUrl + "images/"+ url);
+					addLightboxWithImage(a);					
+					mediacontainer.append(a);
+				});
+			
+			// video template
+			} else if (post.type=="video") {
+								
+				var a= getTemplate("#videoTemplate");
+					$(".src", a).attr("src", baseUrl + "videos/" + post.url);
+					a.attr("poster", baseUrl + "images/" + post.placeholder);
+					 
+		 
+				mediacontainer.append(a);
+				 
+			}
+			
+			$("#posts").append(template);
+		}
+  
+		function getTemplate(type) {
+			var template = $(type).clone();
+			template.attr("id", null);
+			return template;
+		}
+
+		function addLightboxWithImage(el) {
+			el.click(function(e) {
+				
+				e.preventDefault();
+				var url = $(this).attr("src");
+				$('#lightboxImage').attr("src", url);
+				
+	 
+				$('#lightbox').fadeIn(100);
+			});	
+		}
+		
+ 
+ 
+		$('#lightbox').click(function() {  
+			$('#lightbox').fadeOut(100);
+		});
+ 
+    </script>
+ 
+	<script type="text/javascript">
+		$(window).scroll(function()
+		{
+			var scrollTop= $(window).scrollTop();
+			var docHeight= $(document).height();
+			var winHeight= $(window).height();
+			var dif= docHeight - winHeight;
+					
+			if( scrollTop> dif - winHeight) // a whole window height buffer
+			{
+				if (actualcount==posts.length)
+					console.log("no more posts");
+				else
+					addPost(posts[actualcount++]);
+			}
+		});
+	</script>
+	<script src="scripts/sha1.js"></script>
+</body>
+</html>
