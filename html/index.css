@@ -20,10 +20,8 @@
     position: fixed;
     right: 0;
     top: 0;
-    
     zoom: 10;
-    padding-bottom: 0px;
-  
+    padding-bottom: 0px;  
 }
  
 div.horizontal {
@@ -41,6 +39,10 @@ div.vertical {
 figure {
 	margin: 0;
 	text-align: center;
+}
+
+figcaption {
+	padding: 8px;
 }
 
 img {
@@ -69,14 +71,39 @@ video {
 
 article {
 	background: rgb(222,222,222); 
-	width:73%;
+	width:75%;
 	padding: 4px;
-	margin-bottom: 20px;
+	padding-bottom: 10px;	
 	margin: auto;
+	margin-bottom: 20px;	
 }
 
 h1 {
-	margin: auto;
+	text-align: center;
 }
 
- 
+body {
+	font-family: "Verdana", Sans-serif;
+}
+
+/* tablets, portrait */
+@media screen and (max-width: 1024px) {
+	body { 
+		margin: 0;
+	}
+	article {
+		width:86%;
+	}
+}
+
+/* phones */
+@media screen and (max-width: 736px) {
+	body { 
+		margin: 0;
+	}
+	article {
+		width:100%; 
+		padding: 0;
+		padding-bottom: 5px;	
+	}
+} 
