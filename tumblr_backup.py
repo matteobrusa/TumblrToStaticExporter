@@ -184,30 +184,6 @@ def save_video(video_url, prefix=""):
         video_file.write(video_data)
     return _url(video_filename)
 
- 
-
-def header(heading, title='', body_class='', subtitle='', avatar=''):
-    root_rel = '' if body_class == 'index' else '../'
-    css_rel = root_rel + (custom_css if have_custom_css else backup_css)
-    if body_class:
-        body_class = ' class=' + body_class
-    h = u'''<!DOCTYPE html>
-
-<meta charset=%s>
-<title>%s</title>
-<link rel=stylesheet href=%s>
-
-<body%s>
-
-''' % (encoding, heading, css_rel, body_class)
-    if avatar:
-        h += '<img src=%s%s/%s alt=Avatar class=avatar>\n' % (root_rel, theme_dir, avatar)
-    if title:
-        h += u'<h1>%s</h1>\n' % title
-    if subtitle:
-        h += u'<p class=subtitle>%s</p>\n' % subtitle
-    return h
-
 def get_avatar():
     try:
         resp = urllib2.urlopen('http://api.tumblr.com/v2/blog/%s/avatar' % blog_name)
@@ -277,6 +253,7 @@ class TumblrBackup:
         copy(join(html_folder, "index.html"), publish_folder)
         copy(join(html_folder, "index.css"), publish_folder)
         copy(join(html_folder, "sha1.js"), publish_folder)
+        copy(join(html_folder, "js.cookie.js"), publish_folder)
 
 
         
@@ -328,10 +305,6 @@ class TumblrBackup:
             self.title = account
         self.subtitle = unicode(tumblelog)
 
-        # use the meta information to create a HTML header
-        global post_header
-        post_header = header(self.title, body_class='post')
-
         # create config.json
         jsonconfig={}        
         
@@ -360,6 +333,9 @@ class TumblrBackup:
                 post.generate_content()
                 if post.error:
                     sys.stderr.write('%s%s\n' % (post.error, 50 * ' '))
+                
+                if "title" in post.jsonpost and post.jsonpost["title"].lower() == "untitled":
+                    del post.jsonpost["title"] 
                 
                 jsonposts[post.jsonpost["date"]] = post.jsonpost
                 self.post_count += 1
