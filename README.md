@@ -15,6 +15,7 @@ It's a fork of the python script found at http://greymask.com/how-to-backup-a-ht
 - Infinite scrolling
 
 # Dependencies
+This script depends on spynner (https://github.com/makinacorpus/spynner) to download videos.
 
 # How does password protection on a static website works
 The private content is stored in a subfolder whose name is the hash of the password.
