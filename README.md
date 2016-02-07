@@ -1,6 +1,7 @@
 # TumblrToStaticExporter
 This python script generates a single page, Ajax driven copy of a Tumblr blog.
 It's a fork of the python script found at http://greymask.com/how-to-backup-a-html-copy-of-your-entire-tumblr-blog/
+You can see a demo at https://matteobrusa.github.io/TumblrToStaticExporter/
 
 # Supported post types
 - Photo
