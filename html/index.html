@@ -10,12 +10,18 @@
 
 	<div id="posts"></div>
 
-	<div id="lightbox" class="lightbox">
+	<div id="gallery" class="lightbox">
  		<div class="horizontal">
 			<div class="vertical" >
-				<div>
-					<img id="lightboxImage"/>				
-				</div> 
+				<div style="position: relative">
+					<img id="galleryImage"/>		
+					<div id="galleryContainer">
+						<div id="galleryDrawer">
+							<div id="galleryList">
+							</div>
+						</div>
+					</div>
+				</div> 				
 			</div> 
  		</div> 
 	</div>
@@ -32,9 +38,7 @@
 			</div> 
  		</div> 
     </div>
-		
- 
- 
+
     <div style="display: none">
 		
 		<article id="postTemplate">
@@ -53,11 +57,16 @@
 		<video id="videoTemplate" controls preload="metadata">
 				<source class="src" type="video/mp4">
 				Your browser does not support HTML5 video.
-		</video>		
+		</video>	
+		
+		<div id="thumbnail" class="thumbnail"/>
+		 
+			
     </div>
  
     <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
-    <script src="js.cookie.js"></script> 
+    <script type="text/javascript" src="jquery.touchSwipe.min.js"></script>
+    <script type="text/javascript" src="js.cookie.js"></script> 
     <script type="text/javascript">
 
 		startcount= 8;
@@ -167,7 +176,8 @@
 				
 				var a= getTemplate("#photo100");
 				a.attr("src", baseUrl + "images/"+ post.url);
-				addLightboxWithImage(a);
+	 
+				setGalleryEvent(a, null);	
 				mediacontainer.append(a);
 			
 			// photoset template
@@ -177,8 +187,7 @@
 				
 				$.each(post.urls, function(index, url) {
 					
-					var a;
-					
+					var a;				
 					if (tot == 2)
 						a= getTemplate("#photo50");
 					else {
@@ -205,8 +214,8 @@
 						}						
 					}
 				
-					a.attr("src", baseUrl + "images/"+ url);
-					addLightboxWithImage(a);					
+					a.attr("src", baseUrl + "images/" + url);
+					setGalleryEvent(a, post.urls);					
 					mediacontainer.append(a);
 				});
 			
@@ -231,43 +240,192 @@
 			return template;
 		}
 
-		function addLightboxWithImage(el) {
-			el.click(function(e) {
-				
-				e.preventDefault();
-				var url = $(this).attr("src");
-				$('#lightboxImage').attr("src", url);
-				
-	 
-				$('#lightbox').fadeIn(100);
-			});	
-		}
-		
- 
- 
-		$('#lightbox').click(function() {  
-			$('#lightbox').fadeOut(100);
-		});
- 
-    </script>
- 
-	<script type="text/javascript">
+
+		// infinite scrolling
 		$(window).scroll(function()
 		{
-			var scrollTop= $(window).scrollTop();
-			var docHeight= $(document).height();
-			var winHeight= $(window).height();
-			var dif= docHeight - winHeight;
-					
-			if( scrollTop> dif - winHeight) // a whole window height buffer
-			{
-				if (actualcount==posts.length)
-					console.log("no more posts");
-				else
-					addPost(posts[actualcount++]);
+			if (posts) {
+				
+				var scrollTop= $(window).scrollTop();
+				var docHeight= $(document).height();
+				var winHeight= $(window).height();
+				var dif= docHeight - winHeight;
+						
+				if( scrollTop> dif - winHeight*2) // a whole window height buffer
+				{
+					if (actualcount==posts.length)
+						console.log("no more posts");
+					else
+						addPost(posts[actualcount++]);
+				}
 			}
 		});
+
+ 
+		
+		function showGallery(src, list) {
+			
+			$('#gallery').fadeIn(100);
+			
+			$('#galleryImage').attr("src", src);						
+			$('#galleryImage').fadeOut(0);
+			$('#galleryImage').fadeIn(280);			
+			$('#galleryImage').swipe(swipeOptions);
+							
+			$("#galleryList").empty();
+			
+			if (list) 
+				$.each(list, function(index, url) {
+					tmb= getTemplate("#thumbnail");
+					
+					//tmb.attr("src", baseUrl + "images/" + url); 
+					
+					var fullUrl= baseUrl + "images/" + url;
+					tmb.css("background-image","url(" + fullUrl + ")");
+					tmb.attr("data-src", fullUrl);
+					
+					$("#galleryList").append(tmb);				
+					
+					/*
+					var len= list.length;
+					if (len >5) len= 5;
+					tmb.css("max-width", (100)/len+"%");
+					*/
+					
+					setGalleryEvent(tmb, list);						
+					
+					if (src.endsWith(url)) 
+						galleryIndex= index;
+				});
+			
+			galleryList= list;
+		}
+		
+ 		function setGalleryEvent( source, list) {
+			source.click(function(e) {
+				
+				e.preventDefault();
+				var src = $(this).attr("src");
+				
+				if (!src)
+					src=  $(this).attr("data-src");
+				
+				showGallery(src, list);
+				
+				return false;
+			});	
+		}
+ 
+ 
+      
+		 
+		speed= 500;
+		threshold= $("body").width()/10;
+		var t2= $("body").height()/10;
+		if (t2 < threshold) threshold=t2; 
+		 
+		
+        var swipeOptions = {
+            triggerOnTouchEnd: true,
+            swipeStatus: swipeStatus,
+            allowPageScroll: "vertical",
+            threshold: threshold
+        };
+
+  
+ 
+	
+        
+
+        /**
+         * Catch each phase of the swipe.
+         * move : we drag the div
+         * cancel : we animate back to where we were
+         * end : we animate to the next image
+         */
+        function swipeStatus(event, phase, direction, distance) {
+			
+            //If we are moving before swipe, and we are going L or R in X mode, or U or D in Y mode then drag.
+            if (phase == "move" && (direction == "left" || direction == "right")) {
+                var duration = 1110;
+
+                if (direction == "left") {
+                    scrollImages( distance, duration);
+                } else if (direction == "right") {
+                    scrollImages(- distance, duration);
+                }
+
+            } else if (phase == "cancel") {
+				console.log("phase " + phase);
+				if (distance < 10) {
+					console.log("You tapped");  
+					$('#gallery').fadeOut(100);		
+					event.preventDefault(); 
+				}
+				else scrollImages(0, speed);
+                
+            } else if (phase == "end") {
+				console.log("phase " + phase);
+				
+				if (galleryList) {
+					if (direction == "right") {
+						previousImage();
+					} else if (direction == "left") {
+						nextImage();
+					}
+				}
+				else scrollImages(0, speed); 
+            }           
+        }
+        
+        function scrollImages(distance, duration) {
+			
+			console.log("scroll by "+distance);
+			
+           // $('#galleryImage').css("transition-duration", (duration / 1000).toFixed(1) + "s");
+
+            //inverse the number we set in the css
+            var value = (distance < 0 ? "" : "-") + Math.abs(distance/10).toString();
+            $('#galleryImage').css("transform", "translate(" + value + "px,0)");
+        }        
+        
+        function previousImage() {
+            console.log("previous");
+            gi = Math.max(galleryIndex - 1, 0);
+			
+			$('#galleryImage').css("transform", "translate(0px,0)");			
+            showGallery ( baseUrl + "images/" + galleryList[gi], galleryList);
+        }
+
+        function nextImage() {
+			console.log("next");
+            gi = Math.min(galleryIndex + 1, galleryList.length - 1);            
+			$('#galleryImage').css("transform", "translate(0px,0)");
+            showGallery ( baseUrl + "images/" + galleryList[gi], galleryList);
+        }
+      
+		$("#galleryDrawer").hover(
+			function() {
+				abspos=	$("#galleryDrawer")[0].getBoundingClientRect().top;
+				h= $(window).height();
+				
+				glh=$("#galleryList").height();
+				n= h-glh-abspos -20 -10;
+
+		//		console.log("abs= " + abspos + "   h= " + h + " n: " + n);
+
+				if (n<0)
+				$("#galleryDrawer" ).css("transform", "translate(0px,"+n+"px)");
+			}, function() {
+				$("#galleryDrawer" ).css("transform", "translate(0px,0)");
+			});
+      
+		
+		
+ 
+		
 	</script>
 	<script src="sha1.js"></script>
+
 </body>
 </html>
