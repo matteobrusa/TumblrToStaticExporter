@@ -4,6 +4,8 @@ It's a fork of the python script found at http://greymask.com/how-to-backup-a-ht
 
 You can see a copy of http://dummy-content.tumblr.com/ at https://matteobrusa.github.io/TumblrToStaticExporter/
 
+**The HTML part is now a project on its own, and supports posting and editing on Amazon S3:** https://github.com/matteobrusa/Tumbless/ 
+
 # Supported post types
 - Photo
 - Photoset
@@ -20,6 +22,5 @@ You can see a copy of http://dummy-content.tumblr.com/ at https://matteobrusa.gi
 This script depends on spynner (https://github.com/makinacorpus/spynner) to download videos.
 
 # How does password protection on a static website works
-The private content is stored in a subfolder whose name is the hash of the password.
-The landing page computes the hash of the password, then try to retrieve the content from a folder named as the hash.
+The private content is stored in a subfolder whose name contains the password.
 Make sure your web browser doesn't show folder listing!

@@ -336,6 +336,8 @@ class TumblrBackup:
                 
                 if "title" in post.jsonpost and post.jsonpost["title"].lower() == "untitled":
                     del post.jsonpost["title"] 
+                    
+                post.jsonpost["id"]= post.ident 
                 
                 jsonposts[post.jsonpost["date"]] = post.jsonpost
                 self.post_count += 1

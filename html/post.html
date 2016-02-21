@@ -3,10 +3,35 @@
 <head>
     <title></title>
     <link href="index.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.11.3/themes/smoothness/jquery-ui.css">
+    <style>
+		.highlight {
+			border: 1px solid yellow;
+			background-color:yellow;
+		}
+    </style>
 </head>
-<body>
+<body id="drop-target">
  
 	<h1 id="title"> </h1>
+
+	<input id="posttitle"  placeholder="Title" value="title"/> 			<br/>
+	<input id="postdate" type="text" size="10" value="" /><br/>
+	<input id="postdescription"  placeholder="Description" value="desc"/> 			<br/>
+	
+	<button id="postbutton" type="button">Post it!</button> <br/>
+
+	<div id="canvases"></div>
+<!--
+
+	<a id="downloadLnk" download="YourFileName.jpg">
+		<canvas id="myCanvas"></canvas>
+	</a>
+
+
+
+
+
 
 	<div id="posts"></div>
 
@@ -25,6 +50,7 @@
 			</div> 
  		</div> 
 	</div>
+	-->
  
     <div id="loginbox" class="lightbox" style="zoom: 2">
 		<div class="horizontal">
@@ -60,13 +86,18 @@
 		</video>	
 		
 		<div id="thumbnail" class="thumbnail"/>
-		 
+		
+		<a id="canvasTemplate" class="canvasholder">
+			<canvas style="max-width:120px;"></canvas>
+		</a>
 			
     </div>
  
     <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.0.min.js"></script>
+    <script type="text/javascript" src="https://code.jquery.com/ui/1.11.3/jquery-ui.min.js"></script> 
     <script type="text/javascript" src="jquery.touchSwipe.min.js"></script>
     <script type="text/javascript" src="js.cookie.js"></script> 
+    
     <script type="text/javascript">
 
 		startcount= 8;
@@ -243,7 +274,7 @@
 			return template;
 		}
 
-
+/*
 		// infinite scrolling
 		$(window).scroll(function()
 		{
@@ -263,7 +294,7 @@
 				}
 			}
 		});
-
+*/
  
 		
 		function showGallery(src, list) {
@@ -319,113 +350,151 @@
 			});	
 		}
  
+ /*
+ {"date": "1453408891",
+ "type": "photoset", 
+ "title": "First post", 
+ "description": "This is a nice post.", 
+ "urls": ["a.jpg", "b.jpg"]
+ }*/
  
-      
-		 
-		speed= 500;
-		threshold= $("body").width()/10;
-		var t2= $("body").height()/10;
-		if (t2 < threshold) threshold=t2; 
-		 
+		$(document).ready(function(){
+			$("#postdate").datepicker();
+			$("#postdate").datepicker("setDate", new Date());
+			
+			
+			$("#postbutton").click(function(e) {
+								
+				var title= $("#posttitle").val();
+				var date= $("#postdate").val();
+				var description= $("#postdescription").val();
+				 
+				
+				var jsonData = {};
+				jsonData["title"] = title;
+				jsonData["date"] = new Date(date).valueOf()/1000;
+				jsonData["description"] = description;
+				
+				
 		
-        var swipeOptions = {
-            triggerOnTouchEnd: true,
-            swipeStatus: swipeStatus,
-            allowPageScroll: "vertical",
-            threshold: threshold
-        };
+				var holders= $("#canvases .canvasholder");
+				
+				if (holders.length==1) {
+					jsonData["url"] = urls;
+					jsonData["type"] = "photo";
+				}
+				else {
+					var urls= [];
+					$.each(holders, function (index, a){
+						urls.push(a.download);
+					});				
+					jsonData["urls"] = urls;					
+					jsonData["type"] = "photoset";
+				}
+				
+				
+				
+				posts.unshift(jsonData);
+				
+				console.log(posts);
+				
+				var stringPosts= JSON.stringify(posts);
+				
+				$("<a />", {
+					"download": "posts.json",
+					"href" : "data:application/json," + encodeURIComponent(stringPosts)
+				  }).appendTo("body")
+				  .click(function() {
+					  $(this).remove()
+					})[0].click();
+				
+			});	
+		});
+		 
+		 
+		 
+		var MAX_SIZE = 1280;
+		function render(src, canvas, a, filename){
+			var image = new Image();
+			image.onload = function(){
+				 
+				if(image.height > MAX_SIZE) {
+					image.width *= MAX_SIZE / image.height;
+					image.height = MAX_SIZE;
+				}
+				if(image.width > MAX_SIZE) {
+					image.height *= MAX_SIZE / image.width;
+					image.width = MAX_SIZE;
+				}
+				var ctx = canvas.getContext("2d");
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				canvas.width = image.width;
+				canvas.height = image.height;
+				ctx.drawImage(image, 0, 0, image.width, image.height);
+				
+				//compress to jpg and attach to anchor
+				var data= canvas.toDataURL("image/jpeg",0.9);
+				a.href = data;
+				a.download=$.datepicker.formatDate("yymmdd", new Date()) +"_"+ filename;
+			};
+			image.src = src;
+		}
+		
+		
+		function loadImage(src){
+			//	Prevent any non-image file type from being read.
+			if(!src.type.match(/image.*/)){
+				console.log("The dropped file is not an image: ", src.type);
+				return;
+			}
 
-  
- 
+			//	Create our FileReader and run the results through the render function.
+			var reader = new FileReader();
+			reader.onload = function(e){
+				
+				var can= getTemplate("#canvasTemplate");
+				$("#canvases").append(can);
+				
+				var cancan= $("canvas", can)[0];
+				
+				render(e.target.result, cancan, can[0], src.name);
+				
+				/*
+				var data= cancan.toDataURL("image/jpeg",0.9);
+				can[0].href = data;
+				can[0].download=$.datepicker.formatDate("yymmdd", new Date()) +"_"+ src.name;
+				/*can.click(function() {
+										
+					
+				});*/
+			};
+			reader.readAsDataURL(src);
+		}
+
+		// drag and drop stuff
+		var target = document.getElementById("drop-target");		
+		target.addEventListener("dragover", function(e){e.preventDefault();}, true);
+				
+		target.addEventListener("drop", function(e){
+			e.preventDefault(); 
+			$.each(e.dataTransfer.files, function(index, img) {
+					loadImage(img);
+			});		
+		}, true);
 	
-        
-
-        /**
-         * Catch each phase of the swipe.
-         * move : we drag the div
-         * cancel : we animate back to where we were
-         * end : we animate to the next image
-         */
-        function swipeStatus(event, phase, direction, distance) {
-			
-            //If we are moving before swipe, and we are going L or R in X mode, or U or D in Y mode then drag.
-            if (phase == "move" && (direction == "left" || direction == "right")) {
-                var duration = 1110;
-
-                if (direction == "left") {
-                    scrollImages( distance, duration);
-                } else if (direction == "right") {
-                    scrollImages(- distance, duration);
-                }
-
-            } else if (phase == "cancel") {
-				console.log("phase " + phase);
-				if (distance < 10) {
-					console.log("You tapped");  
-					$('#gallery').fadeOut(100);		
-					event.preventDefault(); 
-				}
-				else scrollImages(0, speed);
-                
-            } else if (phase == "end") {
-				console.log("phase " + phase);
-				
-				if (galleryList) {
-					if (direction == "right") {
-						previousImage();
-					} else if (direction == "left") {
-						nextImage();
-					}
-				}
-				else scrollImages(0, speed); 
-            }           
-        }
-        
-        function scrollImages(distance, duration) {
-			
-			console.log("scroll by "+distance);
-			
-           // $('#galleryImage').css("transition-duration", (duration / 1000).toFixed(1) + "s");
-
-            //inverse the number we set in the css
-            var value = (distance < 0 ? "" : "-") + Math.abs(distance/10).toString();
-            $('#galleryImage').css("transform", "translate(" + value + "px,0)");
-        }        
-        
-        function previousImage() {
-            console.log("previous");
-            gi = Math.max(galleryIndex - 1, 0);
-			
-			$('#galleryImage').css("transform", "translate(0px,0)");			
-            showGallery ( baseUrl + "images/" + galleryList[gi], galleryList);
-        }
-
-        function nextImage() {
-			console.log("next");
-            gi = Math.min(galleryIndex + 1, galleryList.length - 1);            
-			$('#galleryImage').css("transform", "translate(0px,0)");
-            showGallery ( baseUrl + "images/" + galleryList[gi], galleryList);
-        }
-      
-		$("#galleryDrawer").hover(
-			function() {
-				abspos=	$("#galleryDrawer")[0].getBoundingClientRect().top;
-				h= $(window).height();
-				
-				glh=$("#galleryList").height();
-				n= h-glh-abspos -20 -10;
-
-		//		console.log("abs= " + abspos + "   h= " + h + " n: " + n);
-
-				if (n<0)
-				$("#galleryDrawer" ).css("transform", "translate(0px,"+n+"px)");
-			}, function() {
-				$("#galleryDrawer" ).css("transform", "translate(0px,0)");
-			});
-      
+	
+		/*
+		function handle_drop_patient(event, ui) {
+			e.preventDefault(); 
+			loadImage(e.dataTransfer.files[0]);
+		}
 		
-		
- 
+		$('#drop-target').droppable({
+			 hoverClass: "highlight",
+			 drop: handle_drop_patient,
+		});
+
+		 	*/
 		
 	</script>
 	<script src="sha1.js"></script>
